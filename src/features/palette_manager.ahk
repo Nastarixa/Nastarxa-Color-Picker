@@ -597,10 +597,41 @@ DeletePaletteUI(app, g) {
     ShowConfirmDialog(app, "🗑 Delete palette '" name "'?`nThis cannot be undone.", "Delete Palette", () => DeletePaletteConfirm(app, g, name))
 }
 
+DeletePaletteStorageFile(app, name) {
+    if (name = "")
+        return
+
+    paths := Map()
+    if app.palettes.Has(name) {
+        p := app.palettes[name]
+        if IsObject(p) && p.HasOwnProp("file") && p.file != "" {
+            filePath := p.file
+            if !RegExMatch(filePath, "i)^[A-Z]:\\|^\\\\")
+                filePath := A_ScriptDir "\" filePath
+            paths[filePath] := true
+
+            SplitPath(p.file, &fileName)
+            if (fileName != "") {
+                safeFileName := RegExReplace(fileName, "[^a-zA-Z0-9 _\-.]", "")
+                if (safeFileName != "")
+                    paths[A_ScriptDir "\colors\" safeFileName] := true
+            }
+        }
+    }
+
+    fallbackName := RegExReplace(name ".txt", "[^a-zA-Z0-9 _\-.]", "")
+    if (fallbackName != "")
+        paths[A_ScriptDir "\colors\" fallbackName] := true
+
+    for filePath, _ in paths {
+        if FileExist(filePath) {
+            try FileDelete(filePath)
+        }
+    }
+}
+
 DeletePaletteConfirm(app, g, name) {
-    palettePath := app.palettes[name].file
-    if FileExist(palettePath)
-        FileDelete(palettePath)
+    DeletePaletteStorageFile(app, name)
 
     app.palettes.Delete(name)
 
@@ -1835,9 +1866,7 @@ DoPaletteMerge(app, g) {
     SaveHistory(app)
 
     if deleteSrc {
-        palettePath := app.palettes[srcName].file
-        if FileExist(palettePath)
-            FileDelete(palettePath)
+        DeletePaletteStorageFile(app, srcName)
         app.palettes.Delete(srcName)
         for i, n in app.paletteOrder {
             if (n = srcName) {
@@ -3366,9 +3395,7 @@ UpdateMergeButtonState(app, cg) {
             }
             if mergedCount > 0 {
                 SavePalette(targetPal, app.version)
-                if sourcePal.HasOwnProp("file") && FileExist(sourcePal.file) {
-                    FileDelete(sourcePal.file)
-                }
+                DeletePaletteStorageFile(app, cg.sourceNameA)
                 app.palettes.Delete(cg.sourceNameA)
                 ShowToast(app, "Merged " mergedCount " colors to " cg.targetB " and deleted " cg.sourceNameA)
                 RefreshPaletteManager(app, app.paletteGui)
@@ -3392,9 +3419,7 @@ UpdateMergeButtonState(app, cg) {
             }
             if mergedCount > 0 {
                 SavePalette(targetPal, app.version)
-                if sourcePal.HasOwnProp("file") && FileExist(sourcePal.file) {
-                    FileDelete(sourcePal.file)
-                }
+                DeletePaletteStorageFile(app, cg.sourceNameB)
                 app.palettes.Delete(cg.sourceNameB)
                 ShowToast(app, "Merged " mergedCount " colors to " cg.targetA " and deleted " cg.sourceNameB)
                 RefreshPaletteManager(app, app.paletteGui)
@@ -3424,7 +3449,7 @@ DoMergeAndDeletePalette(app, cg, targetName, sourceName, sourceSet, targetSet, o
         }
     }
 
-    FileDelete(sourcePal.file)
+    DeletePaletteStorageFile(app, sourceName)
 
     app.palettes.Delete(sourceName)
     for i, name in app.paletteOrder {

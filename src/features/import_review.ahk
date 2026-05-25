@@ -814,7 +814,7 @@ OpenImportTrainingCanvas(app, reviewGui) {
     }
 
 
-    g := Gui("+AlwaysOnTop +Resize +ToolWindow +Border", "Training Canvas")
+    g := Gui("+AlwaysOnTop +ToolWindow +Border", "Training Canvas")
     g.BackColor := "2B2D31"
     g.SetFont("s9", "Consolas")
 
@@ -822,28 +822,21 @@ OpenImportTrainingCanvas(app, reviewGui) {
     imageW := Max(1, data.imageWidth)
     imageH := Max(1, data.imageHeight)
 
-    maxW := 760
-    maxH := 560
+    maxW := 950
+    maxH := 642
 
     scale := Min(maxW / imageW, maxH / imageH)
 
     displayW := Max(120, Round(imageW * scale))
     displayH := Max(120, Round(imageH * scale))
 
-    realW := displayW
-    realH := displayH
-
-    offsetX := 0
-    offsetY := 0
-
     g.imageW := displayW
     g.imageH := displayH
 
-    g.renderW := realW
-    g.renderH := realH
-
-    g.renderOffsetX := Floor((g.imageW - g.renderW) / 2)
-    g.renderOffsetY := Floor((g.imageH - g.renderH) / 2)
+    g.renderW := displayW
+    g.renderH := displayH
+    g.renderOffsetX := 0
+    g.renderOffsetY := 0
 
     g.MarginX := 12
     g.MarginY := 10
@@ -854,58 +847,28 @@ OpenImportTrainingCanvas(app, reviewGui) {
     g.imageHeight := imageH
     g.selectedBlockRow := 0
 
-    g.AddText("x10 y10 cFFFFFF", "Click on image to set X/Y position")
-    g.AddText("x10 y28 c909090", "Ctrl+Click = set end position")
-
-    trackW := 18
+    g.AddText("x10 y10 cFFFFFF", "Training Canvas")
+    g.AddText("x10 y28 c909090", "Region is always active. Enter X/Y/W/H and the highlight updates immediately.")
 
     g.imageX := 18
     g.imageY := 50
-    g.imageCtrl := g.AddPicture("x" g.imageX " y" g.imageY " w" g.imageW " h" g.imageH, imagePath)
-    g.imageOverlay := g.AddText("x" g.imageX " y" g.imageY " w" g.imageW " h" g.imageH " BackgroundTrans")
-    g.imageOverlay.OnEvent("Click", (*) => ImportTrainingCanvasImageClick(g))
-    g.imageCtrl.OnEvent("Click", (*) => ImportTrainingCanvasImageClick(g))
+    previewBitmap := ImportTrainingCanvasCreatePreviewBitmap(imagePath, g.imageW, g.imageH)
+    if previewBitmap {
+        g.previewBitmap := previewBitmap
+        g.imageCtrl := g.AddPicture("x" g.imageX " y" g.imageY " w" g.imageW " h" g.imageH, "HBITMAP:*" previewBitmap)
+    } else {
+        g.imageCtrl := g.AddPicture("x" g.imageX " y" g.imageY " w" g.imageW " h" g.imageH, imagePath)
+    }
 
-    g.xStartValue := 0
-    g.xEndValue := Max(0, imageW - 1)
-    g.yStartValue := 0
-    g.yEndValue := Max(0, imageH - 1)
+    g.regionTop := g.AddProgress("x" g.imageX " y" g.imageY " w1 h3 BackgroundFFD24A")
+    g.regionBottom := g.AddProgress("x" g.imageX " y" g.imageY " w1 h3 BackgroundFFD24A")
+    g.regionLeft := g.AddProgress("x" g.imageX " y" g.imageY " w3 h1 BackgroundFFD24A")
+    g.regionRight := g.AddProgress("x" g.imageX " y" g.imageY " w3 h1 BackgroundFFD24A")
+    g.regionDotH := g.AddProgress("x" g.imageX " y" g.imageY " w13 h3 BackgroundFF4D4D")
+    g.regionDotV := g.AddProgress("x" g.imageX " y" g.imageY " w3 h13 BackgroundFF4D4D")
+    g.regionActive := false
 
-    g.xStartGuide := g.AddProgress("x" g.imageX " y" g.imageY " w2 h" g.imageH " Background00C8FF")
-    g.xEndGuide := g.AddProgress("x" g.imageX " y" g.imageY " w2 h" g.imageH " BackgroundFFD24A")
-    g.yStartGuide := g.AddProgress("x" g.imageX " y" g.imageY " w" g.imageW " h2 Background00C8FF")
-    g.yEndGuide := g.AddProgress("x" g.imageX " y" g.imageY " w" g.imageW " h2 BackgroundFFD24A")
-    g.startDot := g.AddProgress("x" g.imageX " y" g.imageY " w8 h8 Background00C8FF")
-    g.endDot := g.AddProgress("x" g.imageX " y" g.imageY " w8 h8 BackgroundFFD24A")
-    g.selectionLeft := g.AddProgress("x" g.imageX " y" g.imageY " w2 h1 BackgroundFF4D4D")
-    g.selectionRight := g.AddProgress("x" g.imageX " y" g.imageY " w2 h1 BackgroundFF4D4D")
-    g.selectionTop := g.AddProgress("x" g.imageX " y" g.imageY " w1 h2 BackgroundFF4D4D")
-    g.selectionBottom := g.AddProgress("x" g.imageX " y" g.imageY " w1 h2 BackgroundFF4D4D")
-
-    infoY := g.imageY + g.imageH + 8
-    g.AddText("x" g.imageX " y" infoY " cAAAAAA", "X Start")
-    g.xStartLabel := g.AddText("x" (g.imageX + 50) " y" infoY " w60 cFFFFFF", "0")
-
-    g.AddText("x" (g.imageX + 120) " y" infoY " cAAAAAA", "X End")
-    g.xEndLabel := g.AddText("x" (g.imageX + 170) " y" infoY " w60 cFFFFFF", Max(0, imageW - 1) "")
-
-
-
-    g.AddText("x" (g.imageX + 240) " y" infoY " cAAAAAA", "X Max")
-    g.xMaxLabel := g.AddText("x" (g.imageX + 280) " y" infoY " w60 cFFFFFF", Max(0, imageW - 1) "")
-
-
-    g.AddText("x" g.imageX " y" (infoY + 20) " cAAAAAA", "Y Start")
-    g.yStartLabel := g.AddText("x" (g.imageX + 50) " y" (infoY + 20) " w60 cFFFFFF", "0")
-
-    g.AddText("x" (g.imageX + 120) " y" (infoY + 20) " cAAAAAA", "Y End")
-    g.yEndLabel := g.AddText("x" (g.imageX + 170) " y" (infoY + 20) " w60 cFFFFFF", Max(0, imageH - 1) "")
-
-    g.AddText("x" (g.imageX + 240) " y" (infoY + 20) " cAAAAAA", "Y Max")
-    g.yMaxLabel := g.AddText("x" (g.imageX + 280) " y" (infoY + 20) " w60 cFFFFFF", Max(0, imageH - 1) "")
-
-
-    sideX := g.imageX + g.imageW + 20
+    sideX := g.imageX + g.imageW + 24
     g.AddText("x" sideX " y" g.imageY " cAAAAAA", "Block Data")
     g.preview := g.AddProgress("x" sideX " y" (g.imageY + 20) " w54 h42 Background808080")
     g.hexText := g.AddText("x" (sideX + 64) " y" (g.imageY + 20) " w180 cFFFFFF", "#808080")
@@ -913,40 +876,49 @@ OpenImportTrainingCanvas(app, reviewGui) {
 
     formY := g.imageY + 60
     g.AddText("x" sideX " y" formY " cAAAAAA", "Section")
-    g.sectionNameEdit := g.AddEdit("x" sideX " y" (formY + 16) " w180 h22", "Default")
-    g.AddText("x" (sideX + 190) " y" formY " cAAAAAA", "Section Tag")
-    g.sectionTagEdit := g.AddEdit("x" (sideX + 190) " y" (formY + 16) " w120 h22")
+    g.sectionNameEdit := g.AddEdit("x" sideX " y" (formY + 16) " w190 h22", "Default")
+    g.AddText("x" (sideX + 205) " y" formY " cAAAAAA", "Section Tag")
+    g.sectionTagEdit := g.AddEdit("x" (sideX + 205) " y" (formY + 16) " w150 h22")
 
     g.AddText("x" sideX " y" (formY + 48) " cAAAAAA", "Name")
-    g.nameEdit := g.AddEdit("x" sideX " y" (formY + 64) " w180 h22", "Block")
-    g.AddText("x" (sideX + 190) " y" (formY + 48) " cAAAAAA", "Role")
-    g.roleEdit := g.AddDropDownList("x" (sideX + 190) " y" (formY + 64) " w120", DefaultImportReviewRoles())
+    g.nameEdit := g.AddEdit("x" sideX " y" (formY + 64) " w190 h22", "Block")
+    g.AddText("x" (sideX + 205) " y" (formY + 48) " cAAAAAA", "Role")
+    g.roleEdit := g.AddDropDownList("x" (sideX + 205) " y" (formY + 64) " w150", DefaultImportReviewRoles())
 
     g.AddText("x" sideX " y" (formY + 96) " cAAAAAA", "HEX")
-    g.hexEdit := g.AddEdit("x" sideX " y" (formY + 112) " w180 h22")
-    g.AddText("x" (sideX + 190) " y" (formY + 96) " cAAAAAA", "RGB")
-    g.rgbEdit := g.AddEdit("x" (sideX + 190) " y" (formY + 112) " w120 h22")
+    g.hexEdit := g.AddEdit("x" sideX " y" (formY + 112) " w190 h22")
+    g.AddText("x" (sideX + 205) " y" (formY + 96) " cAAAAAA", "RGB")
+    g.rgbEdit := g.AddEdit("x" (sideX + 205) " y" (formY + 112) " w150 h22")
     g.hexEdit.OnEvent("Change", (*) => ImportTrainingCanvasHexChanged(g))
 
-    g.AddText("x" sideX " y" (formY + 144) " cAAAAAA", "X, Y, W, H")
-    g.xEdit := g.AddEdit("x" sideX " y" (formY + 160) " w55 h22")
-    g.yEdit := g.AddEdit("x" (sideX + 60) " y" (formY + 160) " w55 h22")
-    g.wEdit := g.AddEdit("x" (sideX + 120) " y" (formY + 160) " w55 h22")
-    g.hEdit := g.AddEdit("x" (sideX + 180) " y" (formY + 160) " w55 h22")
+    g.AddText("x" sideX " y" (formY + 144) " cAAAAAA", "Region")
+    g.regionStatus := g.AddText("x" (sideX + 58) " y" (formY + 144) " w250 c909090", "Always on")
+    g.AddText("x" sideX " y" (formY + 174) " cAAAAAA", "X")
+    g.xEdit := g.AddEdit("x" (sideX + 16) " y" (formY + 170) " w54 h24", "0")
+    g.AddText("x" (sideX + 78) " y" (formY + 174) " cAAAAAA", "Y")
+    g.yEdit := g.AddEdit("x" (sideX + 94) " y" (formY + 170) " w54 h24", "0")
+    g.AddText("x" (sideX + 156) " y" (formY + 174) " cAAAAAA", "W")
+    g.wEdit := g.AddEdit("x" (sideX + 174) " y" (formY + 170) " w54 h24", "100")
+    g.AddText("x" (sideX + 236) " y" (formY + 174) " cAAAAAA", "H")
+    g.hEdit := g.AddEdit("x" (sideX + 254) " y" (formY + 170) " w54 h24", "100")
+    g.xEdit.OnEvent("Change", (*) => ImportTrainingCanvasPreviewRegion(g, true))
+    g.yEdit.OnEvent("Change", (*) => ImportTrainingCanvasPreviewRegion(g, true))
+    g.wEdit.OnEvent("Change", (*) => ImportTrainingCanvasPreviewRegion(g, true))
+    g.hEdit.OnEvent("Change", (*) => ImportTrainingCanvasPreviewRegion(g, true))
 
-    btnY := formY + 196
-    g.btnAdd := g.AddButton("x" sideX " y" btnY " w150 h28", "Add Block")
-    g.btnDelete := g.AddButton("x" (sideX + 160) " y" btnY " w150 h28", "Delete Block")
+    btnY := formY + 206
+    g.btnAdd := g.AddButton("x" sideX " y" btnY " w175 h28", "Add Block")
+    g.btnDelete := g.AddButton("x" (sideX + 185) " y" btnY " w175 h28", "Delete Block")
     g.btnAdd.OnEvent("Click", (*) => ImportTrainingCanvasAddBlock(app, g))
     g.btnDelete.OnEvent("Click", (*) => ImportTrainingCanvasDeleteBlock(app, g))
 
     listY := btnY + 40
     g.AddText("x" sideX " y" listY " cAAAAAA", "Training Blocks")
-    g.blockList := g.AddListView("x" sideX " y" (listY + 18) " w310 h220 Grid", ["Section", "Role", "HEX", "Bounds"])
-    g.blockList.ModifyCol(1, 88)
-    g.blockList.ModifyCol(2, 76)
-    g.blockList.ModifyCol(3, 76)
-    g.blockList.ModifyCol(4, 88)
+    g.blockList := g.AddListView("x" sideX " y" (listY + 18) " w360 h220 Grid", ["Section", "Role", "HEX", "Bounds"])
+    g.blockList.ModifyCol(1, 100)
+    g.blockList.ModifyCol(2, 82)
+    g.blockList.ModifyCol(3, 82)
+    g.blockList.ModifyCol(4, 92)
     g.blockList.OnEvent("ItemFocus", (ctrl, item) => ImportTrainingCanvasFocusBlock(g, item))
 
     bottomY := Max(g.imageY + g.imageH + 42, listY + 252)
@@ -957,30 +929,23 @@ OpenImportTrainingCanvas(app, reviewGui) {
     g.btnSavePreset.OnEvent("Click", (*) => ImportTrainingCanvasSavePreset(app, g))
     g.btnClose.OnEvent("Click", (*) => CloseImportTrainingCanvas(g))
     g.OnEvent("Close", (*) => CloseImportTrainingCanvas(g))
-    g.OnEvent("Escape", (*) => CancelImportTrainingCanvasSelection(g))
+    g.OnEvent("Escape", (*) => CloseImportTrainingCanvas(g))
 
-    g.xStartGuide.Visible := false
-    g.xEndGuide.Visible := false
-    g.yStartGuide.Visible := false
-    g.yEndGuide.Visible := false
-    g.startDot.Visible := false
-    g.endDot.Visible := false
-
-    g.Show("w" (sideX + 322) " h" (bottomY + 46) " Center")
+    g.Show("w" (sideX + 374) " h" (bottomY + 46) " Center")
     state := GetImportTrainerState()
     state.gui := g
     state.app := app
-    state.selection := 0
 
 
 
     if (g.roleEdit.Text = "")
         g.roleEdit.Choose(1)
-    ImportTrainingCanvasSliderChanged(g)
+    ImportTrainingCanvasSetRegionActive(g, true)
+    ImportTrainingCanvasPreviewRegion(g, true)
 }
 
 GetImportTrainerState() {
-    static state := { gui: 0, app: 0, selection: 0 }
+    static state := { gui: 0, app: 0 }
     return state
 }
 
@@ -994,7 +959,6 @@ CloseImportTrainingCanvas(g := 0) {
     }
     state.gui := 0
     state.app := 0
-    state.selection := 0
 }
 
 ImportTrainingCanvasHexChanged(g) {
@@ -1010,99 +974,169 @@ ImportTrainingCanvasHexChanged(g) {
         g.nameEdit.Value := "Block " hex
 }
 
-ImportTrainingCanvasSliderChanged(g) {
-    x1 := Max(0, Min(g.imageWidth - 1, Round(g.xStartValue)))
-    x2 := Max(0, Min(g.imageWidth - 1, Round(g.xEndValue)))
-    y1 := Max(0, Min(g.imageHeight - 1, Round(g.yStartValue)))
-    y2 := Max(0, Min(g.imageHeight - 1, Round(g.yEndValue)))
-
-    g.xStartLabel.Value := x1
-    g.xEndLabel.Value := x2
-    g.yStartLabel.Value := y1
-    g.yEndLabel.Value := y2
-
-    guideX1 :=  ImportTrainingCanvasMapCoordToDisplay(x1, g.imageWidth, g.renderW)
-    guideX2 := ImportTrainingCanvasMapCoordToDisplay(x2, g.imageWidth, g.renderW)
-
-    guideY1 := g.imageY + g.renderOffsetY + ImportTrainingCanvasMapCoordToDisplay(y1, g.imageHeight, g.renderH)
-    guideY2 := g.imageY + g.renderOffsetY + ImportTrainingCanvasMapCoordToDisplay(y2, g.imageHeight, g.renderH)
-    dotSize := 8
-    dotOffset := Floor(dotSize / 2)
-
-    try g.xStartGuide.Move(guideX1, g.imageY, 2, g.imageH)
-    try g.xEndGuide.Move(guideX2, g.imageY, 2, g.imageH)
-    try g.yStartGuide.Move(g.imageX, guideY1, g.imageW, 2)
-    try g.yEndGuide.Move(g.imageX, guideY2, g.imageW, 2)
-    try g.startDot.Move(guideX1 - dotOffset, guideY1 - dotOffset, dotSize, dotSize)
-    try g.endDot.Move(guideX2 - dotOffset, guideY2 - dotOffset, dotSize, dotSize)
-
-    /*
-    rectLeft := Min(guideX1, guideX2)
-    rectTop := Min(guideY1, guideY2)
-    rectRight := Max(guideX1, guideX2)
-    rectBottom := Max(guideY1, guideY2)
-    rectW := Max(1, rectRight - rectLeft + 1)
-    rectH := Max(1, rectBottom - rectTop + 1)
-    border := 2
-
-    try g.selectionLeft.Move(rectLeft, rectTop, border, rectH)
-    try g.selectionRight.Move(rectRight - border + 1, rectTop, border, rectH)
-    try g.selectionTop.Move(rectLeft, rectTop, rectW, border)
-    try g.selectionBottom.Move(rectLeft, rectBottom - border + 1, rectW, border)
-    */ 
-    
-    x := Min(x1, x2)
-    y := Min(y1, y2)
-    w := Max(1, Abs(x2 - x1))
-    h := Max(1, Abs(y2 - y1))
-
-    state := GetImportTrainerState()
-    state.selection := { x: x, y: y, w: w, h: h }
-    ImportTrainingCanvasPopulateSelectionFields(g)
+ImportTrainingCanvasCreatePreviewBitmap(imagePath, displayW, displayH) {
+    imageType := ""
+    hBitmap := 0
+    try hBitmap := LoadPicture(imagePath, "w" displayW " h" displayH, &imageType)
+    catch
+        return 0
+    return hBitmap
 }
 
-ImportTrainingCanvasImageClick(g) {
-    mouseClient := GetImportTrainingCanvasMouseClientPos(g)
+ImportTrainingCanvasSetRegionActive(g, active) {
+    g.regionActive := true
+    try g.xEdit.Enabled := true
+    try g.yEdit.Enabled := true
+    try g.wEdit.Enabled := true
+    try g.hEdit.Enabled := true
+    try g.regionStatus.Value := "Always on"
+}
 
-    relX := mouseClient.x - g.imageX - g.renderOffsetX
-    relY := mouseClient.y - g.imageY - g.renderOffsetY
-    ; clamp inside real image
-    relX := Max(0, Min(g.renderW, relX))
-    relY := Max(0, Min(g.renderH, relY))
-
-    imgX := Round((relX / g.renderW) * g.imageWidth)
-    imgY := Round((relY / g.renderH) * g.imageHeight)
-
-    if GetKeyState("Ctrl", "P") {
-        g.xEndValue := imgX
-        g.yEndValue := imgY
-    } else {
-        g.xStartValue := imgX
-        g.yStartValue := imgY
+ImportTrainingCanvasPreviewRegion(g, sampleColor := false) {
+    if !g.regionActive {
+        ImportTrainingCanvasHideHighlight(g)
+        return 0
     }
 
-    ImportTrainingCanvasSliderChanged(g)
+    region := ImportTrainingCanvasGetRegionFromFields(g, false)
+    if !IsObject(region) {
+        ImportTrainingCanvasHideHighlight(g)
+        return 0
+    }
+
+    ImportTrainingCanvasMoveHighlight(g, region.x, region.y, region.w, region.h)
+    if sampleColor
+        ImportTrainingCanvasSampleRegionColor(g, region.x, region.y, region.w, region.h)
+    return region
 }
 
-CancelImportTrainingCanvasSelection(g) {
-    GetImportTrainerState().selection := 0
+ImportTrainingCanvasGetRegionFromFields(g, showError := true) {
+    x := SafeInteger(g.xEdit.Value, -1)
+    y := SafeInteger(g.yEdit.Value, -1)
+    w := SafeInteger(g.wEdit.Value, 0)
+    h := SafeInteger(g.hEdit.Value, 0)
+
+    if (x < 0 || y < 0 || w <= 0 || h <= 0) {
+        if showError
+            ImportReviewToast(GetImportTrainerState().app, "Enter valid X/Y/W/H")
+        return 0
+    }
+
+    maxX := Max(0, g.imageWidth - 1)
+    maxY := Max(0, g.imageHeight - 1)
+    x := Max(0, Min(maxX, x))
+    y := Max(0, Min(maxY, y))
+    w := Max(1, Min(g.imageWidth - x, w))
+    h := Max(1, Min(g.imageHeight - y, h))
+
+    return { x: x, y: y, w: w, h: h }
 }
 
-GetImportTrainingCanvasMouseClientPos(g) {
-    MouseGetPos(&mx, &my)
-    pt := Buffer(8, 0)
-    NumPut("int", mx, pt, 0)
-    NumPut("int", my, pt, 4)
-    DllCall("ScreenToClient", "ptr", g.Hwnd, "ptr", pt.Ptr)
-    return { x: NumGet(pt, 0, "int"), y: NumGet(pt, 4, "int") }
+ImportTrainingCanvasSetRegionFields(g, x, y, w, h) {
+    g.xEdit.Value := x
+    g.yEdit.Value := y
+    g.wEdit.Value := w
+    g.hEdit.Value := h
 }
 
-GetImportTrainingCanvasClientToScreen(g, x, y) {
-    pt := Buffer(8, 0)
-    NumPut("int", x, pt, 0)
-    NumPut("int", y, pt, 4)
-    DllCall("ClientToScreen", "ptr", g.Hwnd, "ptr", pt.Ptr)
-    return { x: NumGet(pt, 0, "int"), y: NumGet(pt, 4, "int") }
+ImportTrainingCanvasMoveHighlight(g, x, y, w, h) {
+    left := g.imageX + g.renderOffsetX + ImportTrainingCanvasMapCoordToDisplay(x, g.imageWidth, g.renderW)
+    top := g.imageY + g.renderOffsetY + ImportTrainingCanvasMapCoordToDisplay(y, g.imageHeight, g.renderH)
+    right := g.imageX + g.renderOffsetX + ImportTrainingCanvasMapCoordToDisplay(x + w, g.imageWidth, g.renderW)
+    bottom := g.imageY + g.renderOffsetY + ImportTrainingCanvasMapCoordToDisplay(y + h, g.imageHeight, g.renderH)
+
+    rectW := Max(4, right - left)
+    rectH := Max(4, bottom - top)
+    border := 3
+    dotSize := 13
+    dotHalf := Floor(dotSize / 2)
+    centerX := g.imageX + g.renderOffsetX + ImportTrainingCanvasMapCoordToDisplay(x + Floor(w / 2), g.imageWidth, g.renderW)
+    centerY := g.imageY + g.renderOffsetY + ImportTrainingCanvasMapCoordToDisplay(y + Floor(h / 2), g.imageHeight, g.renderH)
+
+    try g.regionTop.Value := 100
+    try g.regionBottom.Value := 100
+    try g.regionLeft.Value := 100
+    try g.regionRight.Value := 100
+    try g.regionDotH.Value := 100
+    try g.regionDotV.Value := 100
+    try g.regionTop.Move(left, top, rectW, border)
+    try g.regionBottom.Move(left, top + rectH - border, rectW, border)
+    try g.regionLeft.Move(left, top, border, rectH)
+    try g.regionRight.Move(left + rectW - border, top, border, rectH)
+    try g.regionDotH.Move(centerX - dotHalf, centerY - 1, dotSize, 3)
+    try g.regionDotV.Move(centerX - 1, centerY - dotHalf, 3, dotSize)
+    try g.regionTop.Visible := true
+    try g.regionBottom.Visible := true
+    try g.regionLeft.Visible := true
+    try g.regionRight.Visible := true
+    try g.regionDotH.Visible := true
+    try g.regionDotV.Visible := true
+}
+
+ImportTrainingCanvasHideHighlight(g) {
+    try g.regionTop.Visible := false
+    try g.regionBottom.Visible := false
+    try g.regionLeft.Visible := false
+    try g.regionRight.Visible := false
+    try g.regionDotH.Visible := false
+    try g.regionDotV.Visible := false
+}
+
+ImportTrainingCanvasSampleRegionColor(g, x, y, w, h) {
+    displayCenterX := ImportTrainingCanvasMapCoordToDisplay(x + Floor(w / 2), g.imageWidth, g.renderW)
+    displayCenterY := ImportTrainingCanvasMapCoordToDisplay(y + Floor(h / 2), g.imageHeight, g.renderH)
+    hex := ""
+    if g.HasOwnProp("previewBitmap")
+        hex := ImportTrainingCanvasGetBitmapPixelHex(g.previewBitmap, displayCenterX, displayCenterY)
+    if (hex = "")
+        hex := "000000"
+    rgb := ImportReviewGetRGBFromHex(hex)
+
+    g.hexEdit.Value := hex
+    g.rgbEdit.Value := rgb
+    g.hexText.Value := "#" hex
+    g.rgbText.Value := rgb
+    g.preview.Opt("Background" hex)
+
+    if (Trim(g.nameEdit.Value) = "" || g.nameEdit.Value = "Block" || RegExMatch(g.nameEdit.Value, "^Block( [0-9A-F]{6})?$"))
+        g.nameEdit.Value := "Block " hex
+}
+
+ImportTrainingCanvasGetBitmapPixelHex(hBitmap, x, y) {
+    if !hBitmap
+        return ""
+
+    bitmap := Buffer(32, 0)
+    if !DllCall("GetObject", "ptr", hBitmap, "int", bitmap.Size, "ptr", bitmap.Ptr, "int")
+        return ""
+
+    width := NumGet(bitmap, 4, "int")
+    height := NumGet(bitmap, 8, "int")
+    if (width <= 0 || height <= 0)
+        return ""
+
+    x := Max(0, Min(width - 1, Round(x)))
+    y := Max(0, Min(height - 1, Round(y)))
+    stride := width * 4
+    pixels := Buffer(stride * height, 0)
+    bi := Buffer(40, 0)
+    NumPut("uint", 40, bi, 0)
+    NumPut("int", width, bi, 4)
+    NumPut("int", -height, bi, 8)
+    NumPut("ushort", 1, bi, 12)
+    NumPut("ushort", 32, bi, 14)
+
+    hdc := DllCall("GetDC", "ptr", 0, "ptr")
+    ok := DllCall("GetDIBits", "ptr", hdc, "ptr", hBitmap, "uint", 0, "uint", height, "ptr", pixels.Ptr, "ptr", bi.Ptr, "uint", 0, "int")
+    DllCall("ReleaseDC", "ptr", 0, "ptr", hdc)
+    if !ok
+        return ""
+
+    offset := (y * stride) + (x * 4)
+    b := NumGet(pixels, offset, "uchar")
+    g := NumGet(pixels, offset + 1, "uchar")
+    r := NumGet(pixels, offset + 2, "uchar")
+    return Format("{:02X}{:02X}{:02X}", r, g, b)
 }
 
 ImportTrainingCanvasMapCoordToDisplay(coord, sourceSize, displaySize) {
@@ -1139,38 +1173,13 @@ GetImportTrainingCanvasImageSize(imagePath) {
     return result
 }
 
-ImportTrainingCanvasPopulateSelectionFields(g) {
-    state := GetImportTrainerState()
-    if !IsObject(state.selection)
+ImportTrainingCanvasAddBlock(app, g) {
+    region := ImportTrainingCanvasPreviewRegion(g, true)
+    if !IsObject(region) {
+        ImportReviewToast(app, "Enter valid X/Y/W/H")
         return
-
-    sel := state.selection
-    try {
-        g.xEdit.Value := sel.x
-        g.yEdit.Value := sel.y
-        g.wEdit.Value := sel.w
-        g.hEdit.Value := sel.h
     }
 
-    displayCenterX := g.imageX + ImportTrainingCanvasMapCoordToDisplay(sel.x + Floor(sel.w / 2), g.imageWidth, g.imageW)
-    displayCenterY := g.imageY + ImportTrainingCanvasMapCoordToDisplay(sel.y + Floor(sel.h / 2), g.imageHeight, g.imageH)
-    screenPoint := GetImportTrainingCanvasClientToScreen(g, displayCenterX, displayCenterY)
-    pixel := PixelGetColor(screenPoint.x, screenPoint.y, "RGB")
-    hex := Format("{:06X}", pixel & 0xFFFFFF)
-    rgb := ImportReviewGetRGBFromHex(hex)
-
-    g.hexEdit.Value := hex
-    g.rgbEdit.Value := rgb
-    g.hexText.Value := "#" hex
-    g.rgbText.Value := rgb
-    g.preview.Opt("Background" hex)
-
-    if (Trim(g.nameEdit.Value) = "" || g.nameEdit.Value = "Block")
-        g.nameEdit.Value := "Block " hex
-}
-
-
-ImportTrainingCanvasAddBlock(app, g) {
     sectionName := Trim(g.sectionNameEdit.Value)
     if (sectionName = "")
         sectionName := "Default"
@@ -1183,15 +1192,6 @@ ImportTrainingCanvasAddBlock(app, g) {
         rgb := ImportReviewGetRGBFromHex(hex)
     if (hex = "" || rgb = "") {
         ImportReviewToast(app, "Select a block and enter valid HEX/RGB")
-        return
-    }
-
-    x := SafeInteger(g.xEdit.Value, -1)
-    y := SafeInteger(g.yEdit.Value, -1)
-    w := SafeInteger(g.wEdit.Value, 0)
-    h := SafeInteger(g.hEdit.Value, 0)
-    if (x < 0 || y < 0 || w <= 0 || h <= 0) {
-        ImportReviewToast(app, "Draw a rectangle first")
         return
     }
 
@@ -1219,10 +1219,10 @@ ImportTrainingCanvasAddBlock(app, g) {
         section: sectionName,
         pinned: true,
         pinOrder: colors.Length + 1,
-        x: x,
-        y: y,
-        w: w,
-        h: h
+        x: region.x,
+        y: region.y,
+        w: region.w,
+        h: region.h
     })
 
     PopulateImportTrainingCanvasBlocks(g)
@@ -1253,10 +1253,9 @@ ImportTrainingCanvasFocusBlock(g, row) {
     ChooseImportTrainingCanvasRole(g.roleEdit, block.role)
     g.hexEdit.Value := block.hex
     g.rgbEdit.Value := block.rgb
-    g.xEdit.Value := block.x
-    g.yEdit.Value := block.y
-    g.wEdit.Value := block.w
-    g.hEdit.Value := block.h
+    ImportTrainingCanvasSetRegionFields(g, block.x, block.y, block.w, block.h)
+    ImportTrainingCanvasSetRegionActive(g, true)
+    ImportTrainingCanvasPreviewRegion(g, false)
     g.hexText.Value := "#" block.hex
     g.rgbText.Value := block.rgb
     g.preview.Opt("Background" block.hex)
@@ -1299,6 +1298,7 @@ ImportTrainingCanvasDeleteBlock(app, g) {
                         g.trainingData.sectionTags.Delete(sectionName)
                 }
                 PopulateImportTrainingCanvasBlocks(g)
+                g.selectedBlockRow := 0
                 ImportReviewToast(app, "Removed training block")
                 return
             }

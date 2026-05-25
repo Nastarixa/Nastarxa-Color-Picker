@@ -90,9 +90,7 @@ DeletePaletteBtn(app) {
         return
     }
     doDelete() {
-        palettePath := app.palettes[name].file
-        if FileExist(palettePath)
-            FileDelete(palettePath)
+        DeletePaletteStorageFile(app, name)
         app.palettes.Delete(name)
         for i, n in app.paletteOrder {
             if (n = name) {
