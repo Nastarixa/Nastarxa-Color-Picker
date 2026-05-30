@@ -69,7 +69,7 @@ OpenPaletteManager(app) {
     CreatePanel(leftX, yBase, leftW, 300, "📂 Palettes")
 
     y := yBase + 12
-    g.list := g.AddListView("x" leftX+5 " y" y " w" leftW-10 " h130 -Sort -Multi", ["Palette"])
+    g.list := g.AddListView("x" leftX+5 " y" y " w" leftW-10 " h130 -Sort -Multi NoSortHdr", ["Palette"])
     g.list.SetFont("s8", "Consolas")
     g.list.OnEvent("Click", (ctrl, item) => PaletteSwitchUI(app, g))
     g.list.OnEvent("ColClick", (*) => "")
