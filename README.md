@@ -8,6 +8,20 @@ A **color palette manager** for game developers, digital artists, and designers 
 
 ---
 
+## 🖼 Image Preview
+
+![Palette Manager](docs/images/1.png)
+![Bottom Palette](docs/images/2.png)
+![Palette on Side](docs/images/3.png)
+![Bottom Palette 100 Color](docs/images/4.png)
+![Split Undock Palett](docs/images/5.png)
+![Split Undock Palette](docs/images/6.png)
+![Information of the Color](docs/images/7.png)
+![Additional Color Palette for Drawing Software](docs/images/8.png)
+![Screenshot Import Result](docs/images/9.png)
+
+---
+
 ## ✨ Overview
 
 Nastarxa Color Picker is a powerful color workflow tool for fast creative iteration:
@@ -127,19 +141,6 @@ Apply as:
 | `Arrow Keys` | Navigate palette cells |
 | `Enter` | Copy selected color |
 | `Space` | Toggle selection |
----
-
-## 🖼 Image Preview
-
-![Palette Manager](docs/images/1.png)
-![Bottom Palette](docs/images/2.png)
-![Palette on Side](docs/images/3.png)
-![Bottom Palette 100 Color](docs/images/4.png)
-![Split Undock Palett](docs/images/5.png)
-![Split Undock Palette](docs/images/6.png)
-![Information of the Color](docs/images/7.png)
-![Additional Color Palette for Drawing Software](docs/images/8.png)
-![Screenshot Import Result](docs/images/9.png)
 
 ---
 
