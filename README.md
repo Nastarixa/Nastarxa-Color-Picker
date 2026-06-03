@@ -1,6 +1,8 @@
 # 🎨 Nastarxa Color Picker
 
-A **color palette manager** for game developers, digital artists, and designers — built with [AutoHotkey v2](https://www.autohotkey.com/).
+> 🌈 Color palette manager for artists and game developers.
+
+Create, organize, and reuse role-based color palettes for game art, UI design, illustration, and pixel art workflows.
 
 ![Version](https://img.shields.io/badge/version-3.5-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
